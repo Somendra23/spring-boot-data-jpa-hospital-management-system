@@ -15,7 +15,8 @@ import java.util.Optional;
 @Setter
 @Builder
 @AllArgsConstructor
-@Table(name = "app_users")
+@Table(name = "app_users",
+        indexes = {@Index(name = "idx_provider_id_provider_type", columnList = "provider_id, provider_type")})
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy =  GenerationType.IDENTITY)
@@ -26,6 +27,12 @@ public class User implements UserDetails {
 
     private String password;
 
+    @Column(name = "provider_id")
+    private String providerId;
+
+    @Column(name = "provider_type")
+    @Enumerated(EnumType.STRING)
+    private ProviderType providerType;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

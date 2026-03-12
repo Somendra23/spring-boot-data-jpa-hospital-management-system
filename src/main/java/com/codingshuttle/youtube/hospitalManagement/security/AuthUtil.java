@@ -1,17 +1,21 @@
 package com.codingshuttle.youtube.hospitalManagement.security;
 
+import com.codingshuttle.youtube.hospitalManagement.entity.ProviderType;
 import com.codingshuttle.youtube.hospitalManagement.entity.User;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 
+import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
 
+@Slf4j
 @Component
 public class AuthUtil {
 
@@ -40,5 +44,41 @@ public class AuthUtil {
         return claims.getSubject();
 
 
+    }
+
+    public ProviderType getProviderTypeFromRegistrationId(String registrationId){
+        return switch (registrationId.toLowerCase()){
+            case "google" -> ProviderType.GOOGLE;
+            case "facebook" -> ProviderType.FACEBOOK;
+            case "github" -> ProviderType.GITHUB;
+            default ->   throw new IllegalArgumentException("Invalid provider type");
+        };
+    }
+
+    public String determineProviderIdFromOAuth2User(OAuth2User oAuth2User, String registrationId){
+        String providerId = switch (registrationId.toLowerCase()){
+            case "google" -> oAuth2User.getAttribute("sub");
+            case "facebook" -> oAuth2User.getAttribute("id");
+            case "github" -> oAuth2User.getAttribute("id");
+            default ->   throw new IllegalArgumentException("Invalid provider type");
+        };
+        if (providerId ==null || providerId.isEmpty()){
+            log.error("Provider id cannot be null or empty for registration id: {}", registrationId);
+            throw new IllegalArgumentException("Provider id cannot be null or empty");
+        }
+        return providerId;
+    }
+
+    public String determineUsernameFromOAuth2User(OAuth2User oAuth2User, String registrationId, String providerId){
+        String email = oAuth2User.getAttribute("email");
+        if (email!=null && !email.isBlank()){
+            return email;
+        }
+        return switch (registrationId.toLowerCase()){
+            case "google" -> oAuth2User.getAttribute("sub");
+            case "facebook" -> oAuth2User.getAttribute("login");
+            case "github" -> oAuth2User.getAttribute("login");
+            default ->   throw new IllegalArgumentException("Invalid provider type");
+        };
     }
 }
