@@ -1,7 +1,12 @@
 package com.codingshuttle.youtube.hospitalManagement.security;
 
 import com.codingshuttle.youtube.hospitalManagement.controller.SignUpResponseDto;
+import com.codingshuttle.youtube.hospitalManagement.dto.LoginRequestDto;
+import com.codingshuttle.youtube.hospitalManagement.dto.LoginResponseDto;
+import com.codingshuttle.youtube.hospitalManagement.dto.SignUpRequestDto;
 import com.codingshuttle.youtube.hospitalManagement.entity.*;
+import com.codingshuttle.youtube.hospitalManagement.entity.type.RoleType;
+import com.codingshuttle.youtube.hospitalManagement.repository.PatientRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +20,7 @@ import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.stereotype.Service;
 
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +28,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final AuthUtil authUtil;
     private final UserRepository userRepository;
+    private final PatientRepository patientRepository;
 
     private final PasswordEncoder passwordEncoder;
     public LoginResponseDto login(LoginRequestDto loginRequestDto) {
@@ -38,23 +45,36 @@ public class AuthService {
     }
 
     //signup from oauth2
-    public User signUpInternal(LoginRequestDto signupRequestDto,ProviderType providerType, String providerId){
+    public User signUpInternal(SignUpRequestDto signupRequestDto, ProviderType providerType, String providerId){
         User user = userRepository.findByUsername(signupRequestDto.getUsername()).orElse(null);
         if (user!=null) throw new IllegalArgumentException("User already exists");
 
-       user =  User.builder().username(signupRequestDto.getUsername())
+        //when a signup request is received, we create a new user object using the provided details, keeping roles as PATIENT
+        //the ADMIN will then assign roles as required
+        user =  User.builder().username(signupRequestDto.getUsername())
                .providerId(providerId)
                .providerType(providerType)
+               .roles(signupRequestDto.getRoles())//Role.patient
                .build();
 
        if (providerType == ProviderType.EMAIL){
            user.setPassword(passwordEncoder.encode(signupRequestDto.getPassword()));
        }
-       return userRepository.save(user);
+
+        user = userRepository.save(user);
+       Patient patient = Patient.builder()
+               .name(signupRequestDto.getName())
+               .email(signupRequestDto.getUsername())
+               .user(user)
+               .build();
+
+       patientRepository.save(patient);
+       return user;
+       //return userRepository.save(user);
 
     }
 
-    public SignUpResponseDto signup(LoginRequestDto signupRequestDto) {
+    public SignUpResponseDto signup(SignUpRequestDto signupRequestDto) {
 
        User user = signUpInternal(signupRequestDto,ProviderType.EMAIL,null);
        return new SignUpResponseDto(user.getId(), user.getUsername());
@@ -69,11 +89,12 @@ public class AuthService {
         User user = userRepository.findByProviderIdAndProviderType(providerId, providerType).orElse(null);
 
         String email = oAuth2User.getAttribute("email");
+        String name = oAuth2User.getAttribute("name");
         User emailUser= userRepository.findByUsername(email).orElse(null);
 
         if (user == null || emailUser ==null){
             String username = authUtil.determineUsernameFromOAuth2User(oAuth2User, registrationId, providerId);
-            user = signUpInternal(new LoginRequestDto(username, null),providerType,providerId);
+            user = signUpInternal(new SignUpRequestDto(username, null, name,Set.of(RoleType.PATIENT)),providerType,providerId);
 
         } else if (user!=null) {
             if(email!=null && !email.isBlank() && !email.equals(user.getUsername())){

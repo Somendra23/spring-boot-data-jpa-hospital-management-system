@@ -1,6 +1,6 @@
 package com.codingshuttle.youtube.hospitalManagement.security;
 
-import com.codingshuttle.youtube.hospitalManagement.entity.LoginResponseDto;
+import com.codingshuttle.youtube.hospitalManagement.dto.LoginResponseDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

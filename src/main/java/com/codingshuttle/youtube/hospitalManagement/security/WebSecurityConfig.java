@@ -1,5 +1,7 @@
 package com.codingshuttle.youtube.hospitalManagement.security;
 
+import com.codingshuttle.youtube.hospitalManagement.entity.PermissionType;
+import com.codingshuttle.youtube.hospitalManagement.entity.type.RoleType;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -11,6 +13,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
+import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.AuthenticationException;
@@ -28,6 +31,7 @@ import java.io.IOException;
 @Configuration
 @RequiredArgsConstructor
 @Slf4j
+@EnableMethodSecurity
 public class WebSecurityConfig {
 
     private final PasswordEncoder passwordEncoder;
@@ -59,6 +63,11 @@ public class WebSecurityConfig {
                                         "/swagger-ui/**",
                                         "/swagger-ui.html",
                                         "/v3/api-docs/**").permitAll()
+                                .requestMatchers("/admin/**").hasRole(RoleType.ADMIN.name())
+                                .requestMatchers("/doctors/**").hasAnyRole(RoleType.DOCTOR.name(), RoleType.ADMIN.name())
+                                .requestMatchers("/patients/**").hasRole(RoleType.PATIENT.name())
+                                //After ading permissions we can further control the access
+                                .requestMatchers(HttpMethod.DELETE, "/admin/**").hasAnyAuthority(PermissionType.APPOINTMENT_DELETE.getPermission())
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)

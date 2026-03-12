@@ -1,13 +1,13 @@
 package com.codingshuttle.youtube.hospitalManagement.entity;
 
+import com.codingshuttle.youtube.hospitalManagement.entity.type.RoleType;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Entity
 @NoArgsConstructor
@@ -34,9 +34,26 @@ public class User implements UserDetails {
     @Enumerated(EnumType.STRING)
     private ProviderType providerType;
 
+    //so you store as string and not ordinal numbers
+    //default fetch type is LAZY
+    @Enumerated(EnumType.STRING)
+    @ElementCollection(fetch = FetchType.EAGER)
+    private Set<RoleType> roles;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+//        return roles.stream().map(roleType -> new SimpleGrantedAuthority("ROLE_"+roleType)).toList();
+
+        //add permissions also
+        Set<SimpleGrantedAuthority> authorities = new HashSet<>();
+        roles.forEach(roleType -> {
+            Set<SimpleGrantedAuthority> permissions = RolePermissionMapping.getAuthoritiesForRole(roleType);
+            permissions.forEach(permission -> authorities.add(permission));
+            authorities.add(new SimpleGrantedAuthority("ROLE_" + roleType));
+
+        });
+
+        return authorities;
     }
 
 //    @Override

@@ -4,4 +4,7 @@ spring:
     registration:
       google:
 
+      github:
+        client-id: banana
+        client-secret: banana
 

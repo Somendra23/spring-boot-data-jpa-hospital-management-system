@@ -1,4 +1,4 @@
-package com.codingshuttle.youtube.hospitalManagement.entity;
+package com.codingshuttle.youtube.hospitalManagement.dto;
 
 import lombok.*;
 import org.springframework.stereotype.Service;
